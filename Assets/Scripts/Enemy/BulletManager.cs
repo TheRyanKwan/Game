@@ -1,11 +1,12 @@
+// Assets/Scripts/Bullet/BulletManager.cs
 using UnityEngine;
 
 public class BulletManager : MonoBehaviour
 {
     public static BulletManager Instance { get; private set; }
-
+    
     [SerializeField] private GameObject bulletPrefab;
-
+    
     private void Awake()
     {
         if (Instance == null)
@@ -17,7 +18,7 @@ public class BulletManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
-
+    
     private void Start()
     {
         if (bulletPrefab == null)
@@ -25,47 +26,49 @@ public class BulletManager : MonoBehaviour
             bulletPrefab = CreateDefaultBulletPrefab();
         }
     }
-
-    public void SpawnBullet(Vector3 startPosition, Vector3 direction, float speed, float lifetime)
+    
+    /// <summary>
+    /// å‰µå»ºå­å½ˆä¸¦é™„åŠ è¡Œç‚ºã€‚
+    /// </summary>
+    public Bullet SpawnBullet(Vector3 position, params IBulletBehavior[] behaviors)
     {
-        GameObject bulletObj = Instantiate(bulletPrefab, startPosition, Quaternion.identity);
-        Rigidbody rb = bulletObj.GetComponent<Rigidbody>();
-
-        if (rb == null)
+        GameObject bulletObj = Instantiate(bulletPrefab, position, Quaternion.identity);
+        Bullet bullet = bulletObj.GetComponent<Bullet>();
+        
+        if (bullet == null)
         {
-            rb = bulletObj.AddComponent<Rigidbody>();
+            bullet = bulletObj.AddComponent<Bullet>();
         }
-
-        rb.velocity = direction.normalized * speed;
-
-        // ÿ©“®ç÷ÿÊ
-        Destroy(bulletObj, lifetime);
-
-        Debug.Log($"ÿ¶ÿ¬ÿ[–‹‰— {startPosition}ÿC•ûÿü {direction.normalized}");
+        
+        // ç‚ºå­å½ˆæ·»åŠ æ‰€æœ‰è¡Œç‚º
+        foreach (var behavior in behaviors)
+        {
+            bullet.AddBehavior(behavior);
+        }
+        
+        return bullet;
     }
-
+    
     private GameObject CreateDefaultBulletPrefab()
     {
         GameObject bullet = new GameObject("DefaultBullet");
         
         SphereCollider collider = bullet.AddComponent<SphereCollider>();
         collider.radius = 0.3f;
-
+        
         Rigidbody rb = bullet.AddComponent<Rigidbody>();
         rb.isKinematic = false;
         rb.useGravity = false;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
-
+        
         MeshFilter meshFilter = bullet.AddComponent<MeshFilter>();
         meshFilter.mesh = Resources.GetBuiltinResource<Mesh>("Sphere.fbx");
-
+        
         MeshRenderer meshRenderer = bullet.AddComponent<MeshRenderer>();
         Material mat = new Material(Shader.Find("Standard"));
         mat.color = Color.red;
         meshRenderer.material = mat;
-
-        bullet.SetActive(false);
-
+        
         return bullet;
     }
 }

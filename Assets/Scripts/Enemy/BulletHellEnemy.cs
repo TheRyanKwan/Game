@@ -1,90 +1,124 @@
-// BulletHellEnemy.cs
+// Assets/Scripts/Enemy/BulletHellEnemy.cs
 using UnityEngine;
 
-/// <summary>
-/// 彈幕敵人：12 發彈幕（每 0.5 秒一發），然後走位。
-/// 完全由派生類代碼決定攻擊流程與何時結束。
-/// </summary>
 public class BulletHellEnemy : BaseEnemy
 {
     [Header("彈幕設定")]
     [SerializeField] private float bulletInterval = 0.5f;
     [SerializeField] private int bulletsPerCard = 12;
-    [SerializeField] private float maxAngleDeviation = 5f;
     [SerializeField] private float bulletSpeed = 10f;
-    [SerializeField] private float bulletLifetime = 5f;
-
+    
     private float nextBulletTime = 0f;
     private int bulletsFired = 0;
-
+    
     protected override void ExecuteSpellCard()
     {
-        // 檢查是否到達發射時機
         if (Time.time >= nextBulletTime)
         {
-            FireSingleBullet();
+            FireAdvancedBullet();
             bulletsFired++;
             nextBulletTime = Time.time + bulletInterval;
         }
     }
-
-    /// <summary>
-    /// 決定符卡何時結束：所有彈幕發完即為結束。
-    /// </summary>
+    
     protected override bool IsSpellCardFinished()
     {
         return bulletsFired >= bulletsPerCard;
     }
-
-    /// <summary>
-    /// 攻擊結束，重置計數器。
-    /// </summary>
+    
     protected override void OnAttackEnd()
     {
         base.OnAttackEnd();
         bulletsFired = 0;
-        nextBulletTime = Time.time;  // 下次符卡時重新開始計時
+        nextBulletTime = Time.time;
     }
-
-    private void FireSingleBullet()
+    
+    private void FireSpellCardBullet()
     {
         if (playerTransform == null)
             return;
-
+        
         Vector3 directionToPlayer = (playerTransform.position - transform.position).normalized;
-        float randomAngle = Random.Range(-maxAngleDeviation, maxAngleDeviation);
+        float randomAngle = Random.Range(-5f, 5f);
         Vector3 finalDirection = Quaternion.AngleAxis(randomAngle, Vector3.up) * directionToPlayer;
-
-        if (BulletManager.Instance != null)
-        {
-            BulletManager.Instance.SpawnBullet(
-                startPosition: transform.position,
-                direction: finalDirection,
-                speed: bulletSpeed,
-                lifetime: bulletLifetime
-            );
-        }
-
-        Debug.Log($"{gameObject.name} 發射第 {bulletsFired}/{bulletsPerCard} 枚彈幕");
+        
+        // 簡單直線彈幕
+        BulletManager.Instance.SpawnBullet(
+            transform.position,
+            new LinearMovementBehavior(finalDirection, bulletSpeed)
+        );
     }
-
-    protected override void OnStateChange(EnemyState newState)
+    
+    // 範例：複雜彈幕——加速彈幕
+    private void FireAcceleratingBullet()
     {
-        base.OnStateChange(newState);
-        switch (newState)
-        {
-            case EnemyState.Idle:
-                Debug.Log($"{gameObject.name} -> 待機");
-                break;
-            case EnemyState.Attacking:
-                Debug.Log($"{gameObject.name} -> 攻擊");
-                break;
-            case EnemyState.Evading:
-                Debug.Log($"{gameObject.name} -> 走位躲避");
-                break;
-            case EnemyState.Dead:
-                Debug.Log($"{gameObject.name} -> 死亡");
-                break;
-        }
+        Vector3 directionToPlayer = (playerTransform.position - transform.position).normalized;
+        
+        BulletManager.Instance.SpawnBullet(
+            transform.position,
+            new LinearMovementBehavior(directionToPlayer, 2f),
+            new AccelerationBehavior(directionToPlayer * 15f, 30f)
+        );
+    }
+    
+    // 範例：螺旋彈幕——無模版
+    private void FireSpiralBullet()
+    {
+        Vector3 directionToPlayer = (playerTransform.position - transform.position).normalized;
+        
+        // 定義基礎運動 + 旋轉偏移
+        BulletManager.Instance.SpawnBullet(
+            transform.position,
+            new LinearMovementBehavior(directionToPlayer, 20f),
+            new SineOffsetBehavior(
+                directionToPlayer * 20f,
+                Vector3.up,
+                10f,        // 2 Hz 頻率
+                15f         // 3 單位振幅
+            )
+        );
+    }
+    
+    // 範例：追蹤彈幕
+    private void FireTrackingBullet()
+    {
+        BulletManager.Instance.SpawnBullet(
+            transform.position,
+            new TrackingBehavior(playerTransform, 7f, 180f)
+        );
+    }
+    
+    // 範例：在 2 秒後加速的彈幕
+    private void FireDelayedAccelerationBullet()
+    {
+        Vector3 directionToPlayer = (playerTransform.position - transform.position).normalized;
+        
+        BulletManager.Instance.SpawnBullet(
+            transform.position,
+            new LinearMovementBehavior(directionToPlayer, 15f),
+            new TimedBehavior(
+                new AccelerationBehavior(directionToPlayer * 100f),
+                2f  // 2 秒後停止加速
+            )
+        );
+    }
+    
+    // 範例：自定義組合——旋轉 + 加速 + 距離限制
+    private void FireAdvancedBullet()
+    {
+        Vector3 startPos = transform.position;
+        Vector3 directionToPlayer = (playerTransform.position - startPos).normalized;
+        
+        BulletManager.Instance.SpawnBullet(
+            startPos,
+            new LinearMovementBehavior(directionToPlayer, 6f),
+            new RotationBehavior(Vector3.up, 180f),           // 每秒旋轉 180 度
+            new AccelerationBehavior(directionToPlayer * 2f), // 加速
+            new ConditionalEndBehavior(bullet =>              // 距離超過 30 單位時結束
+            {
+                float distFromStart = Vector3.Distance(bullet.position, startPos);
+                return distFromStart > 30f;
+            })
+        );
     }
 }
