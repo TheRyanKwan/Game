@@ -546,6 +546,8 @@ GameObject:
   - component: {fileID: 1078733599}
   - component: {fileID: 1078733602}
   - component: {fileID: 1078733601}
+  - component: {fileID: 1078733603}
+  - component: {fileID: 1078733604}
   m_Layer: 0
   m_Name: CoreManagers
   m_TagString: Untagged
@@ -619,6 +621,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentLevelName: 
+  useCircleWipeTransition: 1
 --- !u!114 &1078733602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -631,6 +634,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a234b6d970f24a94e91506ef78010a61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1078733603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078733596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53168f7c03cebf540b5a868a2f702135, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  circleWipeTransition: {fileID: 11400000, guid: 057babd6f13132c449650d99e3c4e99c,
+    type: 2}
+  transitionDuration: 0.5
+--- !u!114 &1078733604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1078733596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61430b0086307cc4da3ccc8d39ae88da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  transitionTemplate: {fileID: 5276914992623515724, guid: 616d511151a6c554caddf1c754e4f91d,
+    type: 3}
 --- !u!1 &1681665396 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7519952975792970271, guid: 6ac941d0134d6a341a4b661684dc15e8,

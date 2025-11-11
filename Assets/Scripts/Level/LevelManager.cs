@@ -8,12 +8,14 @@ public class LevelManager : MonoBehaviour
     public static LevelManager Instance { get; private set; }
 
     [SerializeField] private string currentLevelName;  // 當前關卡名稱
+    [SerializeField] private bool useCircleWipeTransition = true;
     private bool isTransitioning = false;              // 是否正在轉移關卡中
     private Vector3 playerSpawnPosition;               // 玩家在本關卡的生成位置
 
     // 各系統的參考
     private PersistentStateManager persistentState;    // 持久化狀態管理器（跨關卡數據）
     private EnemyManager enemyManager;                 // 敵人管理器
+    private TransitionController transitionController;
     private Transform playerTransform;                 // 玩家位置
     private CharacterController playerCharacterController;  // 玩家角色控制器
     
@@ -37,6 +39,7 @@ public class LevelManager : MonoBehaviour
     {
         persistentState = PersistentStateManager.Instance;
         enemyManager = EnemyManager.Instance;
+        transitionController = TransitionController.Instance;
         
         // 尋找玩家並獲取其組件參考
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -69,6 +72,11 @@ public class LevelManager : MonoBehaviour
             return;
         }
 
+        if (useCircleWipeTransition && transitionController != null)
+        {
+            transitionController.PlayCircleWipeTransition(0f);
+        }
+
         StartCoroutine(TransitionCoroutine(levelName, spawnPosition));
     }
 
@@ -79,6 +87,8 @@ public class LevelManager : MonoBehaviour
     {
         isTransitioning = true;
         EventManager.TriggerEvent("OnLevelTransitionStart");  // 觸發轉移開始事件
+
+        yield return new WaitForSeconds(1f);
 
         // 第 1 步：卸載前一個關卡
         if (currentLevelScene.IsValid() && currentLevelScene.name != "Bootstrap" && currentLevelScene.name != "Persistent")
