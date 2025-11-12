@@ -90,6 +90,32 @@ public class CooldownSystem : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 替換技能實例（用於應用 Decorator）
+    /// 這是 Decorator 模式的核心：用包裝後的對象替換原始對象
+    /// </summary>
+    public void ReplaceSkill(int skillIndex, BaseSkill newSkill)
+    {
+        if (skillIndex < 0 || skillIndex >= skills.Length)
+        {
+            Debug.LogError($"Invalid skill index: {skillIndex}");
+            return;
+        }
+
+        skills[skillIndex] = newSkill;
+        Debug.Log($"Skill {skillIndex} replaced with upgraded version");
+    }
+
+    /// <summary>
+    /// 獲取技能實例（用於創建 Decorator）
+    /// </summary>
+    public BaseSkill GetSkill(int skillIndex)
+    {
+        if (skillIndex < 0 || skillIndex >= skills.Length)
+            return null;
+        return skills[skillIndex];
+    }
+
     public float GetCooldownNormalized(int skillIndex)
     {
         if (skillIndex < 0 || skillIndex >= skills.Length)
@@ -123,16 +149,6 @@ public class CooldownSystem : MonoBehaviour
             EventManager.TriggerEvent($"OnSkill{i}Ready");
         }
         Debug.Log("All skill cooldown pools reset to full");
-    }
-
-    /// <summary>
-    /// 取得特定技能實例（提供外部系統直接訪問屬性）。
-    /// </summary>
-    public BaseSkill GetSkill(int skillIndex)
-    {
-        if (skillIndex < 0 || skillIndex >= skills.Length)
-            return null;
-        return skills[skillIndex];
     }
 
     public int GetSkillCount()

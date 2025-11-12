@@ -16,7 +16,7 @@ public class Skill2 : BaseSkill
         base.Cast(casterTransform);
     }
 
-    protected override void OnCastComplete()
+    public override void OnCastComplete()
     {
         base.OnCastComplete();
         

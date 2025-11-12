@@ -28,6 +28,12 @@ Assets/
 │   │   ├── Skill4.cs
 │   │   ├── CooldownSystem.cs
 │   │   ├── SkillSystem.cs
+│   │   ├── SkillDecorator.cs
+│   │   ├── SkillUpgradeManager.cs
+│   │   ├── Decorators/
+│   │   │   ├── MaxPoolUpgradeDecorator.cs
+│   │   │   ├── DamageUpgradeDecorator.cs
+│   │   │   ├── FireballTrackingDecorator.cs
 │   ├── Enemy/
 │   │   ├── BaseEnemy.cs
 │   │   ├── EnemyManager.cs
@@ -485,40 +491,39 @@ t=0.3~10.3s: 恢復階段 (池: 0 → 10，可再施放1次)
 
 **主要屬性：**
 
-```csharp
+```
 public abstract class BaseSkill
 {
     // 技能標識
     public int SkillId { get; }
     public string SkillName { get; }
     
-    // 冷卻池配置
-    public float MaxCooldownPool { get; }           // 最大池容量
-    public float CurrentCooldownPool { get; }       // 當前池值
-    public float CooldownCostPerCast { get; }       // 每次施放的消耗
-    public float CooldownRegenRate { get; }         // 每秒恢復量
+    // 冷卻池配置（所有屬性均為 virtual，支援 Decorator 覆寫）
+    public virtual float MaxCooldownPool { get; }           // 最大池容量
+    public virtual float CurrentCooldownPool { get; }       // 當前池值
+    public virtual float CooldownCostPerCast { get; }       // 每次施放的消耗
+    public virtual float CooldownRegenRate { get; }         // 每秒恢復量
     
     // 施放配置
-    public float CastTime { get; }                  // 施放時間
-    public float BaseDamage { get; }                // 基礎傷害
+    public virtual float CastTime { get; }                  // 施放時間
+    public virtual float BaseDamage { get; }                // 基礎傷害
     
     // 狀態查詢
-    public bool IsCasting { get; }                  // 正在施放中
-    public bool IsReady { get; }                    // 可以施放（池足夠 & 未在施放）
-    public int AvailableCasts { get; }              // 可連續施放次數
+    public virtual bool IsCasting { get; }                  // 正在施放中
+    public virtual bool IsReady { get; }                    // 可以施放（池足夠 & 未在施放）
+    public virtual int AvailableCasts { get; }              // 可連續施放次數
     
     public virtual void Cast(Transform casterTransform);
     public virtual void UpdateSkill();
-    protected virtual void OnCastComplete();
+    public virtual void OnCastComplete();
     public virtual void ResetCooldown();
-    public virtual void ApplyUpgrade(string upgradeType, float value);
     public float GetPoolPercentage();
 }
 ```
 
 **使用方式：**
 
-```csharp
+```
 // 檢查技能是否可施放
 if (skill.IsReady)
 {
@@ -530,18 +535,122 @@ int casts = skill.AvailableCasts; // 例如 4
 
 // 重置冷卻（例如在檢查點休息時）
 skill.ResetCooldown();
-
-// 套用升級效果
-skill.ApplyUpgrade("IncreaseDamage", 5f);
-skill.ApplyUpgrade("ReduceCost", 2f);
 ```
 
-**支援的升級類型：**
-- `IncreaseMaxPool` - 增加最大池容量
-- `ReduceCost` - 減少每次施放的消耗
-- `IncreaseRegenRate` - 增加每秒恢復量
-- `IncreaseDamage` - 增加基礎傷害
-- `ReduceCastTime` - 減少施放時間
+---
+
+### 技能升級系統（Decorator 模式）
+
+**設計理念：** 使用 Decorator 設計模式實現技能升級，允許動態堆疊多個升級效果而不修改原始技能類別。
+
+#### SkillDecorator：升級基類
+
+**責任：** 包裝技能並提供升級效果的基礎結構
+
+```
+public abstract class SkillDecorator : BaseSkill
+{
+    protected BaseSkill wrappedSkill;  // 被包裝的技能
+
+    public SkillDecorator(BaseSkill skill);
+    
+    // 獲取最底層的原始技能
+    public BaseSkill GetBaseSkill();
+    
+    // 獲取直接包裝的技能
+    public BaseSkill GetWrappedSkill();
+}
+```
+
+#### 通用升級 Decorators
+
+**1. MaxPoolUpgradeDecorator - 增加冷卻池容量**
+
+```
+// 增加 10 點最大冷卻池
+BaseSkill upgradedSkill = new MaxPoolUpgradeDecorator(originalSkill, 10f);
+```
+
+**2. DamageUpgradeDecorator - 增加傷害（加法）**
+
+```
+// 傷害 +5
+BaseSkill upgradedSkill = new DamageUpgradeDecorator(originalSkill, 5f);
+```
+
+#### 技能特定升級 Decorators
+
+**Skill1 (Fireball) 專屬升級：**
+
+```
+// 追蹤功能：火球會鎖定並追蹤敵人
+BaseSkill trackedFireball = new FireballTrackingDecorator(
+    originalSkill,
+    trackingStrength: 0.8f,  // 追蹤強度
+    trackingDuration: 3f      // 追蹤持續時間
+);
+```
+
+#### SkillUpgradeManager：升級管理器
+
+**責任：** 集中管理升級應用、記錄已應用的升級
+
+```
+public class SkillUpgradeManager : MonoBehaviour
+{
+    public static SkillUpgradeManager Instance { get; }
+    
+    // 應用通用升級
+    public BaseSkill ApplyUpgrade(BaseSkill skill, string upgradeType, float value);
+    
+    // 應用 Fireball 特殊升級
+    public BaseSkill ApplyFireballUpgrade(BaseSkill skill, string upgradeType);
+    
+    // 應用 Skill2 特殊升級
+    public BaseSkill ApplySkill2Upgrade(BaseSkill skill, string upgradeType);
+    
+    // 檢查是否已應用過某個升級
+    public bool HasUpgrade(int skillIndex, string upgradeType);
+    
+    // 記錄已應用的升級
+    public void RecordUpgrade(int skillIndex, string upgradeType);
+    
+    // 獲取所有已應用的升級列表
+    public List<string> GetAppliedUpgrades(int skillIndex);
+}
+```
+
+#### 升級堆疊示例
+
+**多個升級可以疊加：**
+
+```
+// 從原始 Skill1 開始
+BaseSkill skill = CooldownSystem.Instance.GetSkill(0);
+
+// 第一次升級：增加傷害
+skill = new DamageUpgradeDecorator(skill, 5f);
+
+// 第二次升級：再增加傷害
+skill = new DamageUpgradeDecorator(skill, 3f);
+
+// 第三次升級：傷害倍率
+skill = new DamageMultiplierDecorator(skill, 1.2f);
+
+// 第四次升級：添加追蹤功能
+skill = new FireballTrackingDecorator(skill);
+
+// 第五次升級：多重發射
+skill = new FireballMultiShotDecorator(skill);
+
+// 替換系統中的技能引用
+CooldownSystem.Instance.ReplaceSkill(0, skill);
+
+// 最終效果：
+// - 基礎傷害 10 + 5 + 3 = 18，再 x1.2 = 21.6
+// - 帶追蹤功能
+// - 發射 3 顆火球（1 原始 + 2 額外）
+```
 
 ---
 
@@ -569,6 +678,9 @@ public class CooldownSystem : MonoBehaviour
     
     // 獲取技能物件以進行高級操作
     public BaseSkill GetSkill(int skillIndex);
+    
+    // 替換技能實例（用於應用 Decorator）
+    public void ReplaceSkill(int skillIndex, BaseSkill newSkill);
 }
 ```
 
@@ -593,6 +705,13 @@ float remaining = cooldownSystem.GetCooldownRemaining(0);
 
 // 檢查點休息時重置所有冷卻
 cooldownSystem.ResetAllCooldowns();
+
+// 創建 Decorator
+BaseSkill skill = CooldownSystem.Instance.GetSkill(0);
+skill = new DamageUpgradeDecorator(skill, 5f);
+skill = new CostReductionDecorator(skill, 2f);
+skill = new FireballTrackingDecorator(skill);
+CooldownSystem.Instance.ReplaceSkill(0, skill);
 ```
 
 **觸發的事件：**
