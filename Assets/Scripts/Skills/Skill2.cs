@@ -9,9 +9,15 @@ public class Skill2 : BaseSkill
     {
         skillName = "Teleport";
         description = "Instantly teleport forward to the furthest valid position.";
-        castTime = 0f; // Instant — OnCastComplete fires next frame
-        baseDamage = 0f;
+
+        maxCooldownPool = 10f;
         cooldownCostPerCast = 10f;
+        cooldownRegenRate = 1f;
+
+        castTime = 0f;
+        baseDamage = 0f;
+
+        currentCooldownPool = maxCooldownPool;
     }
 
     public override void Cast(Transform casterTransform)
